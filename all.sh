@@ -1,4 +1,4 @@
 #!/bin/sh
 
-./3imp-test.scm
-./c25-test.scm
+./c21-prims-test.scm
+./c25-interp-test.scm

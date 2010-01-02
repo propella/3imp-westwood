@@ -1,7 +1,7 @@
 #!/usr/bin/env gosh
 
 (use gauche.test)
-(require "./c25")
+(require "./c25-interp")
 
 (test* "lookup" '(1)   (lookup 'a '(((a) . (1)) ((a b c) . (2 3 4)))))
 (test* "lookup" '(3 4) (lookup 'b '(((a) . (1)) ((a b c) . (2 3 4)))))

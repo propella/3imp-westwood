@@ -1,6 +1,6 @@
 ;; 2.5 A Meta-Circular Interpreter
 
-(require "./3imp")
+(require "./c21-prims")
 
 ;; The environment is a list of pairs of list, two lists in each pair
 ;; being a list of variables and a corresponding list of values. (p40)

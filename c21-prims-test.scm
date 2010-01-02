@@ -1,6 +1,6 @@
 #!/usr/bin/env gosh
 
-(require "./3imp")
+(require "./c21-prims")
 (use gauche.test)
 
 ;; The rec syntctic form allows the creation of self-recursive
