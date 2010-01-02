@@ -35,3 +35,4 @@
 	   (else (error "invalid expression"))))))
 
 (test* "record-case calc" -42 (calc '(neg (mul (add 3 4) 6))))
+(test-end)

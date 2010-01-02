@@ -26,6 +26,4 @@
      (let ([r exp1])
        (if (eq? (car r) (quote key))
 	   (record vars (cdr r) exp2 ...)
-	   (record-case exp1 case2 ...))))
-
-))
+	   (record-case exp1 case2 ...))))))
