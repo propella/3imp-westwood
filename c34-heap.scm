@@ -78,7 +78,8 @@
 	(set-car! (lookup var e) a)
 	(VM a x e r s)]
        [conti (x)
-	(VM (continuation s) x e r s)]
+;(print (continuation s))
+	(VM (continuation s) x e r s)] ;; Save stack to the accumulator.
        [nuate (s var)
 	(VM (car (lookup var e)) '(return) e r s)]
        [frame (ret x)
@@ -123,6 +124,7 @@
 
 (define call-frame
   (lambda (x e r s)
+; (print 'call-frame (list x e r s))
     (list x e r s)))
 
 ;; Evaluate starts things off. (p62)
