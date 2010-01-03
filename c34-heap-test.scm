@@ -12,7 +12,7 @@
 (check (compile '(lambda (c) c) '(halt))
        =>  '(close (c)                ; vars
 		   (refer c (return)) ; body
-		   (halt)))            ; next
+		   (halt)))           ; next
 
 (check (compile '(if #t 3 4) '()) =>
        '(constant #t (test (constant 3 ()) (constant 4 ()))))
