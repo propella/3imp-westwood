@@ -9,6 +9,7 @@
 (define lookup
   (lambda (var e)
     (recur nxtrib ([e e])
+	   (when (null? e) (error "lookup failed:" var))
 	   (recur nxtelt ([vars (caar e)] [vals (cdar e)])
 		  (cond
 		   [(null? vars) (nxtrib (cdr e))]
