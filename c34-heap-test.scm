@@ -99,9 +99,8 @@
 (check (evaluate 7) => 7)
 (check (evaluate '(quote hello)) => 'hello)
 (check (evaluate '((lambda (x y) y) 6 7)) => 7)
-(check (evaluate '(if #t 7 something)) => 7)
-(check (evaluate '(if #f something 7)) => 7)
+(check (evaluate '(if #t 7 0)) => 7)
+(check (evaluate '(if #f 0 7)) => 7)
 (check (evaluate '((lambda (t) ((lambda (x) t) (set! t 7))) 0)) => 7)
-(check (evaluate '(call/cc (lambda (c) (something 3 (c 7))))) => 7)
+(check (evaluate '(call/cc (lambda (c) (0 3 (c 7))))) => 7)
 (check (evaluate '((lambda (f x) (f x)) (lambda (x) x) 7)) => 7)
-
