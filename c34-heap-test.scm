@@ -3,7 +3,7 @@
 (require "./c34-heap")
 (require "./check")
 
-;; Tests for compiler
+;;; Tests for compiler
 
 (check (compile 'hello '()) => '(refer hello ()))
 
@@ -39,26 +39,62 @@
 
 (check (compile 7 '()) => '(constant 7 ()))
 
-;; Tests for VM
+;;; Tests for VM
 
 (check (VM 7 '(halt) '() '() '()) => 7)
 (check (VM '() '(refer b (halt)) '(((a b c) . (6 7 8))) '() '()) => 7)
 (check (VM '() '(constant 7 (halt)) '() '() '()) => 7)
 (check (VM '() '(close (a) (a) (halt)) '() '() '()) => '((a) () (a)))
 (check (VM '() '(constant 7 (assign x (refer x (halt)))) '(((x) . (0))) '() '()) => 7)
-(check (VM '() '(conti (halt)) '() '() '()) => '((nuate () v) () (v)))
 
-(check (VM 0
-	   '(return)
-	   '()
-	   '()
-	   '((refer x (halt))
-	     (((x) . (7)))
-	     ()
-	     ()))
+;; conti saves the stack
+(check (VM '() '(conti (halt)) '() '() '(STACK)) => '((nuate (STACK) v) () (v)))
+
+;; nuate resumes the stack
+(check (VM '()                            ; acc
+	   '(nuate ((halt) () () ()) arg) ; next
+	   '(((arg) . (7)))               ; env
+	   '()                            ; rub
+	   '())                           ; stack
        => 7)
 
-;; tests for evaluate
+;; return
+(check (VM 0                                        ; acc
+	   '(return)                                ; next
+	   '()                                      ; env
+	   '()                                      ; rub
+	   '((refer x (halt)) (((x) . (7))) () ())) ; stack (next env rub stack)
+       => 7)
+
+;; Trace a behavior of ((lambda (a) a) 7)
+(check (VM '() '(frame (halt)
+		       (constant 7 (argument (close (a)
+						    (refer a (return))
+						    (apply)))))
+	   '() '() '())
+       => 7)
+
+(check (VM '() '(constant 7 (argument (close (a)
+					     (refer a (return))
+					     (apply))))
+	   '() '() '((halt) () () ()))
+       => 7)
+
+(check (VM 7 '(argument (close (a)
+			       (refer a (return))
+			       (apply)))
+	   '() '() '((halt) () () ()))
+       => 7)
+
+(check (VM '() '(close (a) (refer a (return)) (apply))
+	   '() '(7) '((halt) () () ()))
+       => 7)
+
+(check (VM '((refer a (return)) () (a)) '(apply)
+	   '() '(7) '((halt) () () ()))
+       => 7)
+
+;;; tests for evaluate
 
 (check (evaluate 7) => 7)
 (check (evaluate '(quote hello)) => 'hello)
