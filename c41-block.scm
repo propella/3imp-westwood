@@ -1,0 +1,155 @@
+;; 4.1 Stack-Based Implementation of Block-Structured Languages
+
+(require "./c21-prims")
+
+;; Functional appears to be the same as the code for creating a
+;; closure in the heap-based model. (p 74)
+
+(define functional
+  (lambda (body e)
+    (list body e)))
+
+;; The stack is implemented as a Scheme vector. (p 75)
+
+(define stack (make-vector 1000))
+
+;; Push takes a stack pointer and an object and adds the object to the
+;; top of the stack. It returns the updated stack pointer. (p75)
+
+(define push
+  (lambda (x s)
+    (vector-set! stack s x)
+    (+ s 1)))
+
+;; Index takes a stack pointer and an index and returns the object
+;; found at the specified offset from the stack pointer. (p75)
+
+(define index
+  (lambda (s i)
+    (let ((p (- (- s i) 1)))
+      (when (or (< p 0) (<= (vector-length stack) p)) (error "index: out of range" s i))
+      (vector-ref stack p))))
+
+;; Index-set! takes a stack pointer, an index, and an object and
+;; places the object at the specified offset from the stack
+;; pointer. (p75)
+
+(define index-set!
+  (lambda (s i v)
+    (vector-set! stack (- (- s i) 1) v)))
+
+;; Extends is same as chapter 3.5
+
+(define extend
+  (lambda (env rib)
+    (cons rib env)))
+
+
+;; Compile-lookup is same as chapter 3.5 except it uses CPS style.
+
+(define compile-lookup
+  (lambda (var e return)
+    (recur nxtrib ([e e] [rib 0])
+	   (when (null? e) (error "lookup failed:" var))
+	   (recur nxtelt ([vars (car e)] [elt 0])
+		  (cond
+		   [(null? vars) (nxtrib (cdr e) (+ rib 1))]
+		   [(eq? (car vars) var) (return rib elt)]
+		   [else (nxtelt (cdr vars) (+ elt 1))])))))
+
+;; 4.1.5 Translation. (p76)
+
+(define compile
+  (lambda (x e next)
+    (cond
+     [(symbol? x)
+      (compile-lookup x e
+	 (lambda (n m)
+	   (list 'refer n m next)))]
+     [(pair? x)
+      (record-case x
+         [quote (obj)
+	  (list 'constant obj next)]
+	 [lambda (vars body)
+	  (list 'close
+		(compile body
+			 (extend e vars) 
+			 (list 'return (+ (length vars) 1)))
+		next)]
+	 [if (test then else)
+	  (let ([thenc (compile then e next)]
+		[elsec (compile else e next)])
+	    (compile test e (list 'test thenc elsec)))]
+	 [set! (var x)
+	  (compile-lookup var e
+	     (lambda (n m)
+	       (compile x e (list 'assign n m next))))]
+	 [else
+	  (recur loop ([args (cdr x)]
+		       [c (compile (car x) e '(apply))])
+		 (if (null? args)
+		     (list 'frame next c)
+		     (loop (cdr args)
+			   (compile (car args)
+				    e
+				    (list 'argument c)))))])]
+     [else
+      (list 'constant x next)])))
+
+;; print-stack prints contents of the stack up to the stack pointer.
+(define show-stack
+  (lambda (s)
+    (format "~a" (vector-copy stack 0 s))))
+
+;; (p79)
+
+;; Evaluation. (p66)
+
+;; a: the accumulator
+;; x: the next expression
+;; e: the current environment
+;; s: the current stack
+
+(define VM
+  (lambda (a x e s)
+;    (display (format "VM: ~a, ~a, ~a, ~a\n" a x e s))
+;    (display (format "STACK: ~a\n" (show-stack s)))
+    (record-case x
+       [halt () a]
+       [refer (n m x)
+	(VM (index (find-link n e) m) x e s)]
+       [constant (obj x)
+	(VM obj x e s)]
+       [close (body x)
+	(VM (functional body e) x e s)]
+       [test (then else)
+	(VM a (if a then else) e s)]
+       [assign (n m x)
+	(index-set! (find-link n e) m a)
+	(VM a x e s)]
+       [frame (ret x)
+	(VM a x e (push ret (push e s)))]
+       [argument (x)
+	(VM a x e (push a s))]
+       [apply ()
+	(record (body link) a
+	  (VM a body s (push link s)))]
+       [return (n)
+	(let ([s (- s n)])
+	  (VM a (index s 0) (index s 1) (- s 2)))]
+       [else (error "undefined instruction" (car x))])))
+
+;; Find-link receives two arguments, a number n and a frame pointer e,
+;; and locates the nth frame (zero based) in the static frame starting
+;; with e. (p80)
+
+(define find-link
+  (lambda (n e)
+    (if (= n 0)
+	e
+	(find-link (- n 1) (index e -1)))))
+
+;; (p80)
+(define evaluate
+  (lambda (x)
+    (VM '() (compile x '() '(halt)) 0 0)))
