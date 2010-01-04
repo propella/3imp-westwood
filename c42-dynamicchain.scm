@@ -1,105 +1,12 @@
 ;; 4.2 Stack Allocating the Dynamic Chain
 
 (require "./c21-prims")
+(require "./c35-index") ;; tail?, extend, compile-lookup, lookup, compile
 (require "./stack")
-
-;;;;; copy from c35
-
-;; Both applications and call/cc expressions are treated slightly
-;; differently if they appear in the tail position. (p59)
-
-(define tail?
-  (lambda (next)
-    (eq? (car next) 'return)))
-
-;; Extends only adds one rib (names or values) to the enviroment.
-;; This is used as well by the new virtual mathine given later, except
-;; there rib refers to the value rib rather than to the variable
-;; rib. (p65)
-
-(define extend
-  (lambda (env rib)
-    (cons rib env)))
-
-;; Compile-lookup returns a pair of the rib and element indices. (p65)
-
-(define compile-lookup
-  (lambda (var e)
-    (recur nxtrib ([e e] [rib 0])
-	   (when (null? e) (error "lookup failed:" var))
-	   (recur nxtelt ([vars (car e)] [elt 0])
-		  (cond
-		   [(null? vars) (nxtrib (cdr e) (+ rib 1))]
-		   [(eq? (car vars) var) (cons rib elt)]
-		   [else (nxtelt (cdr vars) (+ elt 1))])))))
-
-;; Lookup simply moves directly to the specified rib and returns the
-;; specified list cell within that rib. (p67)
-
-(define lookup
-  (lambda (access e)
-    (recur nxtrib ([e e] [rib (car access)])
-       (when (null? e) (error "lookup failed:" access))
-       (if (= rib 0)
-	   (recur nxtelt ([r (car e)] [elt (cdr access)])
-	      (if (= elt 0)
-		  r
-		  (nxtelt (cdr r) (- elt 1))))
-	   (nxtrib (cdr e) (- rib 1))))))
-
-;; 3.5.2 Translation. (p64)
-
-(define compile
-  (lambda (x e next)
-    (cond
-     [(symbol? x)
-      (list 'refer (compile-lookup x e) next)]
-     [(pair? x)
-      (record-case x
-         [quote (obj)
-	  (list 'constant obj next)]
-	 [lambda (vars body)
-	  (list 'close
-		(compile body (extend e vars) '(return))
-		next)]
-	 [if (test then else)
-	  (let ([thenc (compile then e next)]
-		[elsec (compile else e next)])
-	    (compile test e (list 'test thenc elsec)))]
-	 [set! (var x)
-	  (let ([access (compile-lookup var e)])
-	    (compile x e (list 'assign access next)))]
-	 [call/cc (x)
-	  (let ([c (list 'conti
-			 (list 'argument
-			       (compile x e '(apply))))])
-	    (if (tail? next)
-		c
-		(list 'frame next c)))]
-	 [else
-	  (recur loop ([args (cdr x)]
-		       [c (compile (car x) e '(apply))])
-		 (if (null? args)
-		     (if (tail? next)
-			 c
-			 (list 'frame next c))
-		     (loop (cdr args)
-			   (compile (car args)
-				    e
-				    (list 'argument c)))))])]
-     [else
-      (list 'constant x next)])))
-
-;; Closure now takes only a body and an environment. (p66)
-
-(define closure
-  (lambda (body e)
-    (list body e)))
-
-;;;;;
 
 ;; The conti instruction still creates a continuation, but it does so
 ;; with the help of the function save-stack. (p82)
+;; It uses nil environment '().
 
 (define continuation
   (lambda (s)
@@ -121,7 +28,7 @@
       v)))
 
 ;;; nuate instruction, uses the help function restore-stack to restore
-;;; the stack saved by saved-stack. (p73)
+;;; the stack saved by saved-stack. (p83)
 
 (define restore-stack
   (lambda (v)

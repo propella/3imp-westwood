@@ -3,8 +3,30 @@ Learning 3imp with Gauche
 Three Implementation Model for Scheme by R. Kent Dybvig
 http://www.cs.unm.edu/~williams/cs491/three-imp.pdf
 
-todo: test for call/cc in heap
+* todo: test for call/cc in heap
 
-See also:
+* See also:
 http://github.com/naoyat/reading-3imp-ikoma
 
+* Found bugs in the paper:
+
+Many usages of "record" macro have opposite order of arguments.
+
+4.2.2 Evaluation
+
+In function continuation
+
+-     (list 'refer 0 0 (list 'nuate (save-stack s) '(return)))
++     (list 'refer '(0 . 0) (list 'nuate (save-stack s) '(return)))
+
+In function VM
+
+-       [refer (n m x)
+-	(VM (car (lookup n m e)) x e r s)]
++       [refer (var x)
++	(VM (car (lookup var e)) x e r s)]
+
+-       [assign (n m x)
+-	(set-car! (lookup var n m e) a)
++       [assign (var x)
++	(set-car! (lookup var e) a)

@@ -120,6 +120,7 @@
 
 ;; Continuation includes an explicit reference to the first argument
 ;; of the closet rib, (0 . 0). (p67)
+;; It uses nil environment '().
 
 (define continuation
   (lambda (s)
