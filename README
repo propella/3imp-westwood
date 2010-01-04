@@ -1,7 +1,7 @@
 Learning 3imp with Gauche
 
 Three Implementation Model for Scheme by R. Kent Dybvig
-http://www.cs.unm.edu/~williams/cs491/three-imp.pdf
+http://www.cs.indiana.edu/~dyb/papers/3imp.pdf
 
 * todo: test for call/cc in heap
 

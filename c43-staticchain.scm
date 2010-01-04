@@ -3,20 +3,35 @@
 (require "./c21-prims")
 (require "./stack")
 
-;; Functional appears to be the same as the code for creating a
-;; closure in the heap-based model. (p 74)
+;;;;;; Helper functions
 
-(define functional
-  (lambda (body e)
-    (list body e)))
-
-;; Extends is same as chapter 3.5
+;; Extends is from c35
 
 (define extend
   (lambda (env rib)
     (cons rib env)))
 
-;; Compile-lookup is same as chapter 3.5 except it uses CPS style.
+;; Closure is from c35
+
+(define closure
+  (lambda (body e)
+    (list body e)))
+
+;; Find-link is from c41
+
+(define find-link
+  (lambda (n e)
+    (if (= n 0)
+	e
+	(find-link (- n 1) (index e -1)))))
+
+;; Evaluate is from c41
+(define evaluate
+  (lambda (x)
+    (VM '() (compile x '() '(halt)) 0 0)))
+
+
+;; Compile-lookup is from c41
 
 (define compile-lookup
   (lambda (var e return)
@@ -28,7 +43,39 @@
 		   [(eq? (car vars) var) (return rib elt)]
 		   [else (nxtelt (cdr vars) (+ elt 1))])))))
 
-;; 4.1.5 Translation. (p76)
+;; copied from c42
+
+(define save-stack
+  (lambda (s)
+    (let ([v (make-vector s) ])
+      (recur copy ([i 0])
+	 (unless (= i s)
+	    (vector-set! v i (vector-ref stack i))
+	    (copy (+ i 1))))
+      v)))
+
+;; copied from c42
+
+(define restore-stack
+  (lambda (v)
+    (let ([s (vector-length v)])
+      (recur copy ([i 0])
+	 (unless (= i s)
+	    (vector-set! stack i (vector-ref v i))
+	    (copy (+ i 1))))
+	 s)))
+
+;;;;;; Main functions
+
+;; (p86)
+
+(define continuation
+  (lambda (s)
+    (closure
+     (list 'refer 0 0 (list 'nuate (save-stack s) '(return 0)))
+     '())))
+
+;; (p87)
 
 (define compile
   (lambda (x e next)
@@ -51,10 +98,16 @@
 	  (let ([thenc (compile then e next)]
 		[elsec (compile else e next)])
 	    (compile test e (list 'test thenc elsec)))]
-	 [set! (var x)
-	  (compile-lookup var e
-	     (lambda (n m)
-	       (compile x e (list 'assign n m next))))]
+	 [call/cc (x)
+	  (list 'frame
+		next
+		(list 'conti
+		      (list 'argument
+			    (compile x e '(apply)))))]
+;	 [set! (var x)
+;	  (compile-lookup var e
+;	     (lambda (n m)
+;	       (compile x e (list 'assign n m next))))]
 	 [else
 	  (recur loop ([args (cdr x)]
 		       [c (compile (car x) e '(apply))])
@@ -67,9 +120,7 @@
      [else
       (list 'constant x next)])))
 
-;; (p79)
-
-;; Evaluation. (p66)
+;; (p87)
 
 ;; a: the accumulator
 ;; x: the next expression
@@ -79,7 +130,7 @@
 (define VM
   (lambda (a x e s)
     (debug "\nSTACK: ~a\n" (stack-up-to s))
-    (debug "VM: ~a, ~a, ~a, ~a\n" a x e s)
+    (debug "(VM ~a ~a ~a ~a)\n" a x e s)
     (record-case x
        [halt () a]
        [refer (n m x)
@@ -87,12 +138,16 @@
        [constant (obj x)
 	(VM obj x e s)]
        [close (body x)
-	(VM (functional body e) x e s)]
+	(VM (closure body e) x e s)]
        [test (then else)
 	(VM a (if a then else) e s)]
-       [assign (n m x)
-	(index-set! (find-link n e) m a)
-	(VM a x e s)]
+       [conti (x)
+	(VM (continuation s) x e s)]
+       [nuate (stack x)
+	(VM a x e (restore-stack stack))]
+;       [assign (n m x)
+;	(index-set! (find-link n e) m a)
+;	(VM a x e s)]
        [frame (ret x)
 	(VM a x e (push ret (push e s)))]
        [argument (x)
@@ -106,7 +161,3 @@
 	  (VM a (index s 0) (index s 1) (- s 2)))]
        [else (list 'invalid-state a x e s)])))
 
-;; (p80)
-(define evaluate
-  (lambda (x)
-    (VM '() (compile x '() '(halt)) 0 0)))

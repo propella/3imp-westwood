@@ -1,4 +1,8 @@
 ;; 4.2 Stack Allocating the Dynamic Chain
+;;
+;; This step is to place the dynamic chain, or control stack, on a
+;; true stack, while leaving the static chain, or environment, in the
+;; heap. (p80)
 
 (require "./c21-prims")
 (require "./c35-index") ;; tail?, extend, compile-lookup, lookup, compile
@@ -13,31 +17,6 @@
     (closure
      (list 'refer '(0 . 0) (list 'nuate (save-stack s) '(return)))
      '())))
-
-;; Save-stack creates a Scheme vector to hold the stack, and copies
-;; the current stack from its start (at index 0) to the current stack
-;; pointer, passed as the argument s. (p83)
-
-(define save-stack
-  (lambda (s)
-    (let ([v (make-vector s) ])
-      (recur copy ([i 0])
-	 (unless (= i s)
-	    (vector-set! v i (vector-ref stack i))
-	    (copy (+ i 1))))
-      v)))
-
-;;; nuate instruction, uses the help function restore-stack to restore
-;;; the stack saved by saved-stack. (p83)
-
-(define restore-stack
-  (lambda (v)
-    (let ([s (vector-length v)])
-      (recur copy ([i 0])
-	 (unless (= i s)
-	    (vector-set! stack i (vector-ref v i))
-	    (copy (+ i 1))))
-	 s)))
 
 ;; (p83)
 ;; a: the accumulator

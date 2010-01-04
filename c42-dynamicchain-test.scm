@@ -7,8 +7,6 @@
 
 (set! stack #(some stack values))
 
-(check (save-stack 3) => #(some stack values))
-
 (check (continuation 3) => 
        `((refer (0 . 0) (nuate ,#(some stack values) (return))) ()))
 
