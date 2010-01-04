@@ -96,10 +96,10 @@
      [else
       (list 'constant x next)])))
 
-;; print-stack prints contents of the stack up to the stack pointer.
-(define show-stack
-  (lambda (s)
-    (format "~a" (vector-copy stack 0 s))))
+;; Return a copy of the stack up to the stack pointer.
+
+(define stack-up-to
+  (lambda (s) (vector-copy stack 0 s)))
 
 ;; (p79)
 
@@ -112,8 +112,8 @@
 
 (define VM
   (lambda (a x e s)
-;    (display (format "VM: ~a, ~a, ~a, ~a\n" a x e s))
-;    (display (format "STACK: ~a\n" (show-stack s)))
+    (debug "\nSTACK: ~a\n" (stack-up-to s))
+    (debug "VM: ~a, ~a, ~a, ~a\n" a x e s)
     (record-case x
        [halt () a]
        [refer (n m x)
@@ -135,9 +135,10 @@
 	(record (body link) a
 	  (VM a body s (push link s)))]
        [return (n)
-	(let ([s (- s n)])
+	(let ([s (- s n)]) ;; old-stack = stack - (args + 1 + 2) : dynamic, next-inst, static
+	  ;;     next-inst   old-env     old-stack
 	  (VM a (index s 0) (index s 1) (- s 2)))]
-       [else (error "undefined instruction" (car x))])))
+       [else (list 'invalid-state a x e s)])))
 
 ;; Find-link receives two arguments, a number n and a frame pointer e,
 ;; and locates the nth frame (zero based) in the static frame starting

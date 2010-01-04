@@ -27,3 +27,12 @@
        (if (eq? (car r) (quote key))
 	   (record vars (cdr r) exp2 ...)
 	   (record-case exp1 case2 ...))))))
+
+;; Debug print
+
+(define *debug-flag* #f)
+
+(define debug
+  (lambda args
+    (when *debug-flag*
+	  (display (apply format args)))))

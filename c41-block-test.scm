@@ -54,14 +54,64 @@
 (VM '() '(constant A (argument (constant B (argument (halt))))) 9 10)
 (check stack => #(f 0 1 E d c 2 b a 6 A B ()))
 
+
+;; (frame ret x) starts a new frame by pushing the dynamic link (the
+;; current frame pointer) and next expression ret. (p78)
+
 (set! stack (make-vector 1000))
+(check (VM '() '(frame (more-inst) (subroutine)) 0 0)
+       => '(invalid-state () (subroutine) 0 2))
+(check (stack-up-to 2) => #(0 (more-inst)))
+
+;; (return n) takes an additional argument, n, that determines the
+;; number of elements it removes from the stack in addition to the
+;; saved dynamic link and next expression. (p79)
+
+;; (dynamic and static must be a number in a real situation)
+(set! stack #(foo bar dynamic (return-inst) arg1 arg2 arg3 static))
+(check (VM 'ret-value '(return 4) 7 8) => '(invalid-state ret-value (return-inst) dynamic 2))
+(check (stack-up-to 2) => #(foo bar))
+
+;; Trace a behavior of ((lambda (a) a) 7)
+;; (set! *debug-flag* #t)
+;; (check (evaluate '((lambda (a) a) 7)) => 7)
+;; (set! *debug-flag* #f)
+
+(set! stack #(() () () ()))
+(check (VM '() '(frame (halt)
+		       (constant 7 (argument (close (refer 0 0 (return 2)) (apply))))) 0 0)
+       => 7)
+
+(set! stack #(0 (halt) () ()))
+(check (VM '() '(constant 7 (argument (close (refer 0 0 (return 2)) (apply)))) 0 2) => 7)
+
+(set! stack #(0 (halt) () ()))
+(check (VM 7 '(argument (close (refer 0 0 (return 2)) (apply))) 0 2) => 7)
+
+(set! stack #(0 (halt) 7 ()))
+(check (VM '() '(close (refer 0 0 (return 2)) (apply)) 0 3) => 7)
+
+(set! stack #(0 (halt) 7 ())) ;; dynamic, next arg
+(check (VM '((refer 0 0 (return 2)) 0) '(apply) 0 3) => 7)
+
+(set! stack #(0 (halt) 7 0)) ;; dynamic, next, arg, static
+(check (VM '() '(refer 0 0 (return 2)) 3 4) => 7)
+
+(set! stack #(0 (halt) 7 hoge)) ;; static is not actually used??
+(check (VM 7 '(return 2) 3 4) => 7)
+
+(set! stack #(() () () ()))
+(check (VM 7 '(halt) 0 0) => 7)
 
 ;;; tests for evaluate
 
+(set! stack (make-vector 1000))
+
 (check (evaluate 7) => 7)
 (check (evaluate '(quote hello)) => 'hello)
-;(print "***")
+(check (evaluate '((lambda () 7))) => 7)
 (check (evaluate '((lambda (x y) y) 6 7)) => 7)
+
 (check (evaluate '(if #t 7 0)) => 7)
 (check (evaluate '(if #f 0 7)) => 7)
 (check (evaluate '((lambda (t) ((lambda (x) t) (set! t 7))) 0)) => 7)
