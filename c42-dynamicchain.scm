@@ -1,6 +1,9 @@
-;; 3.4 Implementing the Heap-Based Model
+;; 4.2 Stack Allocating the Dynamic Chain
 
 (require "./c21-prims")
+(require "./stack")
+
+;;;;; copy from c35
 
 ;; Both applications and call/cc expressions are treated slightly
 ;; differently if they appear in the tail position. (p59)
@@ -29,6 +32,20 @@
 		   [(null? vars) (nxtrib (cdr e) (+ rib 1))]
 		   [(eq? (car vars) var) (cons rib elt)]
 		   [else (nxtelt (cdr vars) (+ elt 1))])))))
+
+;; Lookup simply moves directly to the specified rib and returns the
+;; specified list cell within that rib. (p67)
+
+(define lookup
+  (lambda (access e)
+    (recur nxtrib ([e e] [rib (car access)])
+       (when (null? e) (error "lookup failed:" access))
+       (if (= rib 0)
+	   (recur nxtelt ([r (car e)] [elt (cdr access)])
+	      (if (= elt 0)
+		  r
+		  (nxtelt (cdr r) (- elt 1))))
+	   (nxtrib (cdr e) (- rib 1))))))
 
 ;; 3.5.2 Translation. (p64)
 
@@ -73,8 +90,49 @@
      [else
       (list 'constant x next)])))
 
-;; Evaluation. (p66)
+;; Closure now takes only a body and an environment. (p66)
 
+(define closure
+  (lambda (body e)
+    (list body e)))
+
+;;;;;
+
+;; The conti instruction still creates a continuation, but it does so
+;; with the help of the function save-stack. (p82)
+
+(define continuation
+  (lambda (s)
+    (closure
+     (list 'refer '(0 . 0) (list 'nuate (save-stack s) '(return)))
+     '())))
+
+;; Save-stack creates a Scheme vector to hold the stack, and copies
+;; the current stack from its start (at index 0) to the current stack
+;; pointer, passed as the argument s. (p83)
+
+(define save-stack
+  (lambda (s)
+    (let ([v (make-vector s) ])
+      (recur copy ([i 0])
+	 (unless (= i s)
+	    (vector-set! v i (vector-ref stack i))
+	    (copy (+ i 1))))
+      v)))
+
+;;; nuate instruction, uses the help function restore-stack to restore
+;;; the stack saved by saved-stack. (p73)
+
+(define restore-stack
+  (lambda (v)
+    (let ([s (vector-length v)])
+      (recur copy ([i 0])
+	 (unless (= i s)
+	    (vector-set! stack i (vector-ref v i))
+	    (copy (+ i 1))))
+	 s)))
+
+;; (p83)
 ;; a: the accumulator
 ;; x: the next expression
 ;; e: the current environment
@@ -83,6 +141,8 @@
 
 (define VM
   (lambda (a x e r s)
+    (debug "\nSTACK: ~a\n" (stack-up-to s))
+    (debug "(VM ~a ~a ~a ~a ~a)\n" a x e r s)
     (record-case x
        [halt () a]
        [refer (var x)
@@ -98,56 +158,20 @@
 	(VM a x e r s)]
        [conti (x)
 	(VM (continuation s) x e r s)]
-       [nuate (s var)
-	(VM (car (lookup var e)) '(return) e r s)]
+       [nuate (stack x)
+	(VM a x e r (restore-stack stack))]
        [frame (ret x)
-	(VM a x e '() (call-frame ret e r s))]
+	(VM a x e '() (push ret (push e (push r s))))]
        [argument (x)
 	(VM a x e (cons a r) s)]
        [apply ()
 	(record (body e) a
 	  (VM a body (extend e r) '() s))]
        [return ()
-	(record (x e r s) s
-	   (VM a x e r s))]
-       [else (error "undefined instruction" (car x))])))
+	(VM a (index s 0) (index s 1) (index s 2) (- s 3))]
+       [else (list 'invalid-state a x e s)])))
 
-;; Closure now takes only a body and an environment. (p66)
-
-(define closure
-  (lambda (body e)
-    (list body e)))
-
-;; Continuation includes an explicit reference to the first argument
-;; of the closet rib, (0 . 0). (p67)
-
-(define continuation
-  (lambda (s)
-    (closure (list 'nuate s '(0 . 0)) '())))
-
-;; Lookup simply moves directly to the specified rib and returns the
-;; specified list cell within that rib. (p67)
-
-(define lookup
-  (lambda (access e)
-    (recur nxtrib ([e e] [rib (car access)])
-       (when (null? e) (error "lookup failed:" access))
-       (if (= rib 0)
-	   (recur nxtelt ([r (car e)] [elt (cdr access)])
-	      (if (= elt 0)
-		  r
-		  (nxtelt (cdr r) (- elt 1))))
-	   (nxtrib (cdr e) (- rib 1))))))
-
-;; Call-frame makes a list of its arguments, a return address, an
-;; environment, a rib, and a stack, i.e., the next frame in the
-;; stack. (p61)
-
-(define call-frame
-  (lambda (x e r s)
-    (list x e r s)))
-
-;; Evaluate starts things off. (p62)
+;; (p84)
 (define evaluate
   (lambda (x)
-    (VM '() (compile x '() '(halt)) '() '() '())))
+    (VM '() (compile x '() '(halt)) '() '() 0)))

@@ -26,6 +26,15 @@
 (check (lookup '(1 . 1) '((1) (2 3 4))) => '(3 4))
 (check (lookup '(1 . 2) '((1) (2 3 4))) => '(4))
 
+;;; tests for VM
+
+(check (VM 7 '(halt) '() '() '()) => 7)
+(check (VM 0 '(refer (0 . 0) (halt)) '((a) (b c d)) '() '()) => 'a)
+(check (VM '() '(constant 7 (halt)) '() '() '()) => 7)
+(check (VM '() '(close (refer (0 . 0) (return)) (halt)) '*env* '() '())
+       => '((refer (0 . 0) (return)) *env*))
+(check (VM '() '(constant 7 (assign (0 . 0) (refer (0 . 0) (halt)))) '((x)) '() '()) => 7)
+
 ;;; tests for evaluate
 
 (check (evaluate 7) => 7)
