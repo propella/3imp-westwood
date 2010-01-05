@@ -8,3 +8,4 @@
 ./c41-block-test.scm
 ./c42-dynamicchain-test.scm
 ./c43-staticchain-test.scm
+./c44-display-test.scm
