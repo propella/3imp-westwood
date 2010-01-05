@@ -17,19 +17,10 @@
   (lambda (body e)
     (list body e)))
 
-;; Find-link is from c41
-
-(define find-link
-  (lambda (n e)
-    (if (= n 0)
-	e
-	(find-link (- n 1) (index e -1)))))
-
 ;; Evaluate is from c41
 (define evaluate
   (lambda (x)
     (VM '() (compile x '() '(halt)) 0 0)))
-
 
 ;; Compile-lookup is from c41
 
@@ -42,28 +33,6 @@
 		   [(null? vars) (nxtrib (cdr e) (+ rib 1))]
 		   [(eq? (car vars) var) (return rib elt)]
 		   [else (nxtelt (cdr vars) (+ elt 1))])))))
-
-;; copied from c42
-
-(define save-stack
-  (lambda (s)
-    (let ([v (make-vector s) ])
-      (recur copy ([i 0])
-	 (unless (= i s)
-	    (vector-set! v i (vector-ref stack i))
-	    (copy (+ i 1))))
-      v)))
-
-;; copied from c42
-
-(define restore-stack
-  (lambda (v)
-    (let ([s (vector-length v)])
-      (recur copy ([i 0])
-	 (unless (= i s)
-	    (vector-set! stack i (vector-ref v i))
-	    (copy (+ i 1))))
-	 s)))
 
 ;;;;;; Main functions
 
@@ -104,10 +73,6 @@
 		(list 'conti
 		      (list 'argument
 			    (compile x e '(apply)))))]
-;	 [set! (var x)
-;	  (compile-lookup var e
-;	     (lambda (n m)
-;	       (compile x e (list 'assign n m next))))]
 	 [else
 	  (recur loop ([args (cdr x)]
 		       [c (compile (car x) e '(apply))])
@@ -145,9 +110,6 @@
 	(VM (continuation s) x e s)]
        [nuate (stack x)
 	(VM a x e (restore-stack stack))]
-;       [assign (n m x)
-;	(index-set! (find-link n e) m a)
-;	(VM a x e s)]
        [frame (ret x)
 	(VM a x e (push ret (push e s)))]
        [argument (x)
