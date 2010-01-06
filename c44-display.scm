@@ -68,7 +68,6 @@
 
 ;;; (p94)
 		 
-
 (define compile
   (lambda (x e next)
     (cond
@@ -141,84 +140,78 @@
 	       (return-local n)
 	       (nxtlocal (cdr locals) (+ n 1)))))))
 
-;; ;;;;;; Helper functions
+;; (p97)
 
-;; ;; Extends is from c35
+;; a: the accumulator
+;; x: the next expression
+;; f: the frame
+;; c: the closure
+;; s: the current stack
 
-;; (define extend
-;;   (lambda (env rib)
-;;     (cons rib env)))
+(define VM
+  (lambda (a x f c s)
+    (debug "\nstack ~a\n" (stack-up-to s))
+    (debug "(VM ~a ~a ~a ~a ~a)\n" a x f c s)
+    (record-case x
+       [halt () a]
+       [refer-local (n x)
+	(VM (index f n) x f c s)]
+       [refer-free (n x)
+        (VM (index-closure c n) x f c s)]
+       [constant (obj x)
+	(VM obj x f c s)]
+       [close (n body x)
+	(VM (closure body n s) x f c (- s n))]
+       [test (then else)
+	(VM a (if a then else) f c s)]
+       [conti (x)
+	(VM (continuation s) x f c s)]
+       [nuate (stack x)
+	(VM a x f c (restore-stack stack))]
+       [frame (ret x)
+	(VM a x f c (push ret (push f (push c s))))]
+       [argument (x)
+	(VM a x f c (push a s))]
+       [apply ()
+	(VM a (closure-body a) s a s)]
+       [return (n)
+	(let ([s (- s n)])
+	  (VM a (index s 0) (index s 1) (index s 2) (- s 3)))]
+       [else (list 'invalid-state a x f c s)])))
 
-;; ;; Closure is from c35
+;; Closure is responsible for building the vector representing the
+;; display closure. (p97)
 
-;; (define closure
-;;   (lambda (body e)
-;;     (list body e)))
+(define closure
+  (lambda (body n s)
+    (let ([v (make-vector (+ n 1))])
+      (vector-set! v 0 body)
+      (recur f ([i 0])
+	 (unless (= i n)
+	    (vector-set! v (+ i 1) (index s i))
+	    (f (+ i 1))))
+      v)))
 
-;; ;; Evaluate is from c41
-;; (define evaluate
-;;   (lambda (x)
-;;     (VM '() (compile x '() '(halt)) 0 0)))
+;; Closure-body and index-closure reference the body or argument
+;; values of a display clojure. (p98)
 
-;; ;; Compile-lookup is from c41
+(define closure-body
+  (lambda (c)
+    (vector-ref c 0)))
 
-;; (define compile-lookup
-;;   (lambda (var e return)
-;;     (recur nxtrib ([e e] [rib 0])
-;; 	   (when (null? e) (error "lookup failed:" var))
-;; 	   (recur nxtelt ([vars (car e)] [elt 0])
-;; 		  (cond
-;; 		   [(null? vars) (nxtrib (cdr e) (+ rib 1))]
-;; 		   [(eq? (car vars) var) (return rib elt)]
-;; 		   [else (nxtelt (cdr vars) (+ elt 1))])))))
+(define index-closure
+  (lambda (c n)
+    (vector-ref c (+ n 1))))
 
-;; ;;;;;; Main functions
+;; (p98)
 
-;; ;; (p86)
+(define evaluate
+  (lambda (x)
+    (VM '() (compile x '() '(halt)) 0 '() 0)))
 
-;; (define continuation
-;;   (lambda (s)
-;;     (closure
-;;      (list 'refer 0 0 (list 'nuate (save-stack s) '(return 0)))
-;;      '())))
+;;;;;; Helper functions
 
-;; ;; (p87)
-
-;; ;; (p87)
-
-;; ;; a: the accumulator
-;; ;; x: the next expression
-;; ;; e: the current environment
-;; ;; s: the current stack
-
-;; (define VM
-;;   (lambda (a x e s)
-;;     (debug "\nSTACK: ~a\n" (stack-up-to s))
-;;     (debug "(VM ~a ~a ~a ~a)\n" a x e s)
-;;     (record-case x
-;;        [halt () a]
-;;        [refer (n m x)
-;; 	(VM (index (find-link n e) m) x e s)]
-;;        [constant (obj x)
-;; 	(VM obj x e s)]
-;;        [close (body x)
-;; 	(VM (closure body e) x e s)]
-;;        [test (then else)
-;; 	(VM a (if a then else) e s)]
-;;        [conti (x)
-;; 	(VM (continuation s) x e s)]
-;;        [nuate (stack x)
-;; 	(VM a x e (restore-stack stack))]
-;;        [frame (ret x)
-;; 	(VM a x e (push ret (push e s)))]
-;;        [argument (x)
-;; 	(VM a x e (push a s))]
-;;        [apply ()
-;; 	(record (body link) a
-;; 	  (VM a body s (push link s)))]
-;;        [return (n)
-;; 	(let ([s (- s n)]) ;; old-stack = stack - (args + 1 + 2) : dynamic, next-inst, static
-;; 	  ;;     next-inst   old-env     old-stack
-;; 	  (VM a (index s 0) (index s 1) (- s 2)))]
-;;        [else (list 'invalid-state a x e s)])))
-
+(define continuation
+  (lambda (s)
+    (closure
+     (list 'refer-local 0 (list 'nuate (save-stack s) '(return 0))) 0 0)))

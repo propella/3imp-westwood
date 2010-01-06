@@ -30,3 +30,13 @@ In function VM
 -	(set-car! (lookup var n m e) a)
 +       [assign (var x)
 +	(set-car! (lookup var e) a)
+
+4.4.5 Evaluation
+
+Function continuation is not defined.
+
+(define continuation
+  (lambda (s)
+    (closure
+     (list 'refer-local 0 (list 'nuate (save-stack s) '(return 0))) 0 0)))
+
