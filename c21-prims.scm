@@ -28,7 +28,7 @@
 	   (record vars (cdr r) exp2 ...)
 	   (record-case exp1 case2 ...))))))
 
-;; Debug print
+;;;; Debug print
 
 (define *debug-flag* #f)
 
@@ -36,3 +36,14 @@
   (lambda args
     (when *debug-flag*
 	  (display (apply format args)))))
+
+;; Useful macro for debug print
+;; (debug-with (some) (thing) (to) (do))
+
+(define-syntax debug-with
+  (syntax-rules ()
+    ((debug-with exp1 ...)
+     (begin
+       (set! *debug-flag* #t)
+       exp1 ...
+       (set! *debug-flag* #f)))))

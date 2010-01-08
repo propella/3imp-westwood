@@ -33,10 +33,9 @@ In function VM
 
 4.4.5 Evaluation
 
-Function continuation is not defined.
+Function continuation was not defined.
 
 (define continuation
   (lambda (s)
     (closure
      (list 'refer-local 0 (list 'nuate (save-stack s) '(return 0))) 0 0)))
-
