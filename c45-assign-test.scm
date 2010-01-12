@@ -97,6 +97,23 @@
        => '(frame (return) ;; no tail call
 		  (constant 2 (argument (constant 1 (argument (refer-local 0 (apply))))))))
 
+;; Non tail call: Compare to c46-tail-test.scm
+(check (compile '((lambda (f) (f 0 7)) (lambda (a b) b)) '() '() '(halt))
+        => '(frame (halt)
+ 		  (close 0 ;; (lambda (a b) b)
+ 			 (refer-local 1
+ 			 (return 2))
+ 		  (argument
+		  (close 0 ;; (lambda (f) (f 0 7))
+			 (frame (return 1)
+				(constant 7
+			        (argument
+				(constant 0
+				(argument
+				(refer-local 0
+				(apply)))))))
+		  (apply))))))
+
 ;;; Tests for free variable
 
 (check (index-closure #(*func* 0 1 2) 2) => 2)

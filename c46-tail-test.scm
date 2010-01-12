@@ -94,14 +94,32 @@
 (check (compile '(call/cc (lambda (c) c)) '_ '() '(return 7))
        => '(conti (argument (close 0 (refer-local 0 (return 1)) (shift 1 7 (apply))))))
 
-;; apply
+;; apply makes a frame.
 (check (compile '(func 1 2) '((func) . ()) '() '(halt))
        => '(frame (halt)
 		  (constant 2 (argument (constant 1 (argument (refer-local 0 (apply))))))))
 
-;; apply with tail call      
+;; apply with tail call doesn't make a frame, but it removes arguments by shift.
 (check (compile '(func 1 2) '((func) . ()) '() '(return 7))
        => '(constant 2 (argument (constant 1 (argument (refer-local 0 (shift 2 7 (apply))))))))
+
+;; Tail call: Compare to c45-assign-test.scm
+
+(check (compile '((lambda (f) (f 0 7)) (lambda (a b) b)) '() '() '(halt))
+       =>'(frame (halt)
+	  (close 0 ;; (lambda (a b) b)
+		 (refer-local 1 ;; b
+		 (return 2))
+	  (argument
+	  (close 0 ;; ((lambda (f) (f 0 7))
+		 (constant 7
+                 (argument
+	         (constant 0
+                 (argument
+	         (refer-local 0 ;; f
+                 (shift 2 1
+		 (apply))))))) 
+	  (apply))))))
 
 ;;; Tests for free variable
 
@@ -187,6 +205,9 @@
 ;; apply test
 (set! stack #(*frame* *closure* (halt) *local1* *local0*))
 (check (VM #((refer-local 1 (return 2))) '(apply) '_ '_ 5) => '*local1*)
+
+
+
 
 ;; return test
 (set! stack #(*old-frame* *old-closure* (halt) *arg2* *arg1* *arg0*))
