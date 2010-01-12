@@ -12,3 +12,4 @@
 ./c43-staticchain-test.scm
 ./c44-display-test.scm
 ./c45-assign-test.scm
+./c46-tail-test.scm

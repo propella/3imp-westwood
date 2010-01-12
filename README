@@ -8,6 +8,14 @@ http://www.cs.indiana.edu/~dyb/papers/3imp.pdf
 * See also:
 http://github.com/naoyat/reading-3imp-ikoma
 
+* Terminology:
+
+(p72)
+- Dynamic link = the caller's frame.
+  (referring a return address, or dynamic scope)
+- Static link = the frame of the closest enclosing function definition.
+  (referring an environment, static scope or lexical scope)
+
 * Found bugs in the paper:
 
 Many usages of "record" macro have opposite order of arguments.

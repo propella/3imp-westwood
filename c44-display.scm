@@ -4,6 +4,32 @@
 (require "./stack")
 (require "./set")
 
+;; Find-free uses a simple algorithm to return the set of free
+;; variables of an expression x, given an initial set of bound
+;; variables b. (p92)
+
+(define find-free
+  (lambda (x b)
+    (cond
+     [(symbol? x) (if (set-member? x b) '() (list x))]
+     [(pair? x)
+      (record-case x
+	 [quote (obj) '()]
+	 [lambda (vars body)
+	   (find-free body (set-union vars b))]
+	 [if (test then else)
+	     (set-union (find-free test b)
+			(set-union (find-free then b)
+				   (find-free else b)))]
+	 [call/cc (exp) (find-free exp b)]
+	 [else
+	  (recur next ([x x])
+	     (if (null? x)
+		 '()
+		 (set-union (find-free (car x) b)
+			    (next (cdr x)))))])]
+     [else '()])))
+
 ;;; (p94)
 		 
 (define compile

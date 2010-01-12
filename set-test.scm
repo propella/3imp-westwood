@@ -19,14 +19,3 @@
 
 (check (set-intersect '(1 2 3) '(3 4 5)) => '(3))
 (check (set-intersect '(1 2) '(4 5)) => '())
-
-;;; Tests for find-free
-
-(check (find-free 'hello '(a b c)) => '(hello))
-(check (find-free '(quote hello) '(a b c)) => '())
-(check (find-free '(lambda (x) (x y)) '()) => '(y))
-(check (find-free '(lambda (x) (x y)) '(y)) => '())
-(check (find-free '(if x y z) '(x y)) => '(z))
-(check (find-free '(call/cc (lambda (x) (x y))) '()) => '(y))
-(check (find-free '(lambda (x) (func x y)) '()) => '(func y))
-(check (find-free 7 '()) => '())

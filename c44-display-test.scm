@@ -3,6 +3,17 @@
 (require "./c44-display")
 (require "./check")
 
+;;; Tests for find-free
+
+(check (find-free 'hello '(a b c)) => '(hello))
+(check (find-free '(quote hello) '(a b c)) => '())
+(check (find-free '(lambda (x) (x y)) '()) => '(y))
+(check (find-free '(lambda (x) (x y)) '(y)) => '())
+(check (find-free '(if x y z) '(x y)) => '(z))
+(check (find-free '(call/cc (lambda (x) (x y))) '()) => '(y))
+(check (find-free '(lambda (x) (func x y)) '()) => '(func y))
+(check (find-free 7 '()) => '())
+
 ;;; Tests for variable reference
 
 (check (compile-lookup 'x '((x) . ())
